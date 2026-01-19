@@ -23,13 +23,13 @@ const styles = {
 
 export default function Column({ title, status, tasks }) {
   const dispatch = useDispatch();
-
   const { setNodeRef, isOver } = useDroppable({
     id: status,
     data: { type: "column", status },
   });
 
-  const filtered = tasks.filter((t) => t.status === status);
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const filtered = safeTasks.filter((t) => t.status === status);
   const ids = filtered.map((t) => String(t.id));
 
   const [editTask, setEditTask] = useState(null);

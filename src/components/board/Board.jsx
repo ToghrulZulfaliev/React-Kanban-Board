@@ -26,7 +26,7 @@ function SearchIcon(props) {
 
 export default function Board() {
   const dispatch = useDispatch();
-  const tasks = useSelector((state) => state.tasks.tasks) || [];
+  const tasks = useSelector((state) => state.tasks?.tasks ?? []);
 
   // ✅ Search panel (yalnız search)
   const [query, setQuery] = useState("");
