@@ -11,7 +11,7 @@ export default function SortableTaskCard({ task, onEdit, onDelete }) {
     isDragging,
   } = useSortable({
     id: String(task.id),
-    data: { type: "task", status: task.status }, // ✅ FIX: hover üçün vacibdir
+    data: { type: "task", status: task.status }, // ✅ vacib
   });
 
   const style = {
@@ -26,44 +26,67 @@ export default function SortableTaskCard({ task, onEdit, onDelete }) {
       style={style}
       className="rounded-lg border border-gray-200 bg-white p-3"
     >
-      <div
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing select-none"
-      >
-        <div className="font-semibold text-gray-800">{task.title}</div>
+      <div className="flex items-start gap-3">
+        {/* ✅ DRAG HANDLE (mobile üçün ən stabil yol) */}
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="
+            mt-1 shrink-0
+            cursor-grab active:cursor-grabbing
+            rounded-md border border-gray-200
+            bg-gray-50
+            px-2 py-1 text-xs
+            select-none
+            touch-none
+          "
+          aria-label="Drag task"
+          title="Drag"
+        >
+          ⠿
+        </button>
 
-        {!!task.description && (
-          <div className="text-sm text-gray-500 mt-1">{task.description}</div>
-        )}
-
-        {!!task.tags?.length && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {task.tags.map((tag, i) => (
-              <span
-                key={i}
-                className="text-[10px] px-2 py-1 rounded-full border bg-gray-50 text-gray-600"
-              >
-                {tag}
-              </span>
-            ))}
+        {/* Content */}
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-gray-800 break-words">
+            {task.title}
           </div>
-        )}
-      </div>
 
-      <div className="mt-3 flex gap-2">
-        <button
-          onClick={() => onEdit?.(task)}
-          className="text-xs px-2 py-1 border rounded"
-        >
-          Edit
-        </button>
-        <button
-          onClick={() => onDelete?.(task.id)}
-          className="text-xs px-2 py-1 border rounded"
-        >
-          Delete
-        </button>
+          {!!task.description && (
+            <div className="text-sm text-gray-500 mt-1 break-words">
+              {task.description}
+            </div>
+          )}
+
+          {!!task.tags?.length && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {task.tags.map((tag, i) => (
+                <span
+                  key={i}
+                  className="text-[10px] px-2 py-1 rounded-full border bg-gray-50 text-gray-600"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={() => onEdit?.(task)}
+              className="text-xs px-2 py-1 border rounded"
+            >
+              Edit
+            </button>
+            <button
+              onClick={() => onDelete?.(task.id)}
+              className="text-xs px-2 py-1 border rounded"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

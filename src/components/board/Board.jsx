@@ -5,6 +5,7 @@ import {
   useSensor,
   useSensors,
   PointerSensor,
+  TouchSensor,
 } from "@dnd-kit/core";
 import { useRef } from "react";
 import Column from "./Column";
@@ -17,11 +18,17 @@ export default function Board() {
 
   const lastMovedToStatusRef = useRef(null);
 
-  // ✅ BONUS 1: təsadüfi drag-i azaldır (scroll edəndə ilişməsin)
-  // distance: 8 => barmaq/mouse 8px tərpənmədən drag başlamır
+  // ✅ Desktop: distance
+  // ✅ Mobile: long-press (delay) -> scroll ilə qarışmır, drag rahat başlayır
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 180,
+        tolerance: 8,
+      },
     })
   );
 
@@ -54,6 +61,7 @@ export default function Board() {
     lastMovedToStatusRef.current = null;
   }
 
+  // ✅ hover effekti: üstündən keçən kimi status dəyişir
   function handleDragOver(event) {
     const { active, over } = event;
     if (!over) return;
@@ -91,7 +99,7 @@ export default function Board() {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      {/* Mobile: horizontal scroll + snap | md+: grid */}
+      {/* ✅ Mobile: horizontal scroll + snap | md+: grid */}
       <section
         className="
           w-full min-w-0
