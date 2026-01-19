@@ -7,7 +7,7 @@ import {
   PointerSensor,
   TouchSensor,
 } from "@dnd-kit/core";
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Column from "./Column";
 import { moveTask } from "../../features/tasks/taskSlice";
 
@@ -16,15 +16,30 @@ export default function Board() {
   const tasks = useSelector((state) => state.tasks.tasks);
   const search = useSelector((state) => state.ui.search).toLowerCase().trim();
 
+  const filteredTasks = useMemo(() => {
+    if (!search) return tasks;
+    return tasks.filter((t) => {
+      const title = (t.title || "").toLowerCase();
+      const desc = (t.description || "").toLowerCase();
+      const tags = (t.tags || []).join(" ").toLowerCase();
+      return title.includes(search) || desc.includes(search) || tags.includes(search);
+    });
+  }, [tasks, search]);
+
+  const getTaskById = (id) => tasks.find((t) => String(t.id) === String(id));
+
   const lastMovedToStatusRef = useRef(null);
 
-  // ✅ board scroll container ref
+  // ✅ scroll container ref
   const boardRef = useRef(null);
 
-  // ✅ drag zamanı snap söndürmək üçün
+  // ✅ drag state
   const [dragging, setDragging] = useState(false);
 
-  // ✅ Desktop: distance | Mobile: long press
+  // ✅ pointer X ref (barmağın/mouse-un X koordinatı)
+  const pointerXRef = useRef(null);
+
+  // ✅ sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
@@ -33,17 +48,6 @@ export default function Board() {
       activationConstraint: { delay: 180, tolerance: 8 },
     })
   );
-
-  const filteredTasks = !search
-    ? tasks
-    : tasks.filter((t) => {
-        const title = (t.title || "").toLowerCase();
-        const desc = (t.description || "").toLowerCase();
-        const tags = (t.tags || []).join(" ").toLowerCase();
-        return title.includes(search) || desc.includes(search) || tags.includes(search);
-      });
-
-  const getTaskById = (id) => tasks.find((t) => String(t.id) === String(id));
 
   function getOverStatus(over) {
     if (!over) return null;
@@ -64,7 +68,6 @@ export default function Board() {
     setDragging(true);
   }
 
-  // ✅ hover effekti: üstündən keçən kimi status dəyişir
   function handleDragOver(event) {
     const { active, over } = event;
     if (!over) return;
@@ -90,35 +93,64 @@ export default function Board() {
     );
   }
 
-  // ✅ 100% işləyən horizontal edge auto-scroll
-  function handleDragMove(event) {
-    const container = boardRef.current;
-    if (!container) return;
-
-    const cRect = container.getBoundingClientRect();
-
-    // active rect (viewport-a görə)
-    const aRect =
-      event.active?.rect?.current?.translated ||
-      event.active?.rect?.current?.initial;
-
-    if (!aRect) return;
-
-    const EDGE = 70; // kənara nə qədər yaxınlaşanda scroll başlasın
-    const SPEED = 18; // scroll sürəti
-
-    // Drag elementinin sağ/solu container-in kənarına yaxınlaşanda scroll et
-    const nearLeft = aRect.left < cRect.left + EDGE;
-    const nearRight = aRect.right > cRect.right - EDGE;
-
-    if (nearLeft) container.scrollLeft -= SPEED;
-    if (nearRight) container.scrollLeft += SPEED;
-  }
-
   function handleDragEnd() {
     lastMovedToStatusRef.current = null;
     setDragging(false);
+    pointerXRef.current = null;
   }
+
+  // ✅ 1) Drag zamanı pointer (touch/mouse) koordinatını oxu
+  useEffect(() => {
+    if (!dragging) return;
+
+    const onTouchMove = (e) => {
+      if (!e.touches || !e.touches[0]) return;
+      pointerXRef.current = e.touches[0].clientX;
+    };
+
+    const onMouseMove = (e) => {
+      pointerXRef.current = e.clientX;
+    };
+
+    // passive true saxlayırıq ki, dnd qarışmasın (sadəcə oxuyuruq)
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    window.addEventListener("mousemove", onMouseMove);
+
+    return () => {
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("mousemove", onMouseMove);
+    };
+  }, [dragging]);
+
+  // ✅ 2) RAF loop: pointer kənara yaxınlaşanda container-i scroll elə
+  useEffect(() => {
+    if (!dragging) return;
+
+    let raf = 0;
+
+    const tick = () => {
+      const container = boardRef.current;
+      const x = pointerXRef.current;
+
+      if (container && typeof x === "number") {
+        const rect = container.getBoundingClientRect();
+
+        const EDGE = 70;   // kənar zonası
+        const SPEED = 18;  // scroll sürəti
+
+        const nearLeft = x < rect.left + EDGE;
+        const nearRight = x > rect.right - EDGE;
+
+        if (nearLeft) container.scrollLeft -= SPEED;
+        if (nearRight) container.scrollLeft += SPEED;
+      }
+
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [dragging]);
 
   return (
     <DndContext
@@ -126,10 +158,9 @@ export default function Board() {
       collisionDetection={rectIntersection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
-      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
     >
-      {/* ✅ Mobile: horizontal scroll + snap | drag zamanı snap söndürülür */}
+      {/* ✅ Mobile: horizontal scroll + snap | drag zamanı snap OFF */}
       <section
         ref={boardRef}
         className={`
