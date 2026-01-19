@@ -18,8 +18,8 @@ export default function Board() {
 
   const lastMovedToStatusRef = useRef(null);
 
-  // ✅ Desktop: distance
-  // ✅ Mobile: long-press (delay) -> scroll ilə qarışmır, drag rahat başlayır
+  // ✅ Desktop: az tərpənəndə başlayır
+  // ✅ Mobile: long-press ilə başlayır (scroll ilə qarışmır)
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
@@ -98,6 +98,11 @@ export default function Board() {
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      autoScroll={{
+        // ✅ drag edəndə kənara yaxınlaşanda board özü scroll etsin
+        threshold: { x: 0.25, y: 0.25 },
+        acceleration: 12,
+      }}
     >
       {/* ✅ Mobile: horizontal scroll + snap | md+: grid */}
       <section
@@ -110,6 +115,7 @@ export default function Board() {
           [-webkit-overflow-scrolling:touch]
           scroll-smooth
           snap-x snap-mandatory md:snap-none
+          overscroll-x-contain
         "
       >
         <div
