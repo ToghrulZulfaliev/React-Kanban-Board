@@ -7,7 +7,7 @@ import {
   PointerSensor,
   TouchSensor,
 } from "@dnd-kit/core";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import Column from "./Column";
 import { moveTask } from "../../features/tasks/taskSlice";
 
@@ -18,17 +18,19 @@ export default function Board() {
 
   const lastMovedToStatusRef = useRef(null);
 
-  // ✅ Desktop: az tərpənəndə başlayır
-  // ✅ Mobile: long-press ilə başlayır (scroll ilə qarışmır)
+  // ✅ board scroll container ref
+  const boardRef = useRef(null);
+
+  // ✅ drag zamanı snap söndürmək üçün
+  const [dragging, setDragging] = useState(false);
+
+  // ✅ Desktop: distance | Mobile: long press
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 5 },
     }),
     useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 180,
-        tolerance: 8,
-      },
+      activationConstraint: { delay: 180, tolerance: 8 },
     })
   );
 
@@ -59,6 +61,7 @@ export default function Board() {
 
   function handleDragStart() {
     lastMovedToStatusRef.current = null;
+    setDragging(true);
   }
 
   // ✅ hover effekti: üstündən keçən kimi status dəyişir
@@ -87,8 +90,34 @@ export default function Board() {
     );
   }
 
+  // ✅ 100% işləyən horizontal edge auto-scroll
+  function handleDragMove(event) {
+    const container = boardRef.current;
+    if (!container) return;
+
+    const cRect = container.getBoundingClientRect();
+
+    // active rect (viewport-a görə)
+    const aRect =
+      event.active?.rect?.current?.translated ||
+      event.active?.rect?.current?.initial;
+
+    if (!aRect) return;
+
+    const EDGE = 70; // kənara nə qədər yaxınlaşanda scroll başlasın
+    const SPEED = 18; // scroll sürəti
+
+    // Drag elementinin sağ/solu container-in kənarına yaxınlaşanda scroll et
+    const nearLeft = aRect.left < cRect.left + EDGE;
+    const nearRight = aRect.right > cRect.right - EDGE;
+
+    if (nearLeft) container.scrollLeft -= SPEED;
+    if (nearRight) container.scrollLeft += SPEED;
+  }
+
   function handleDragEnd() {
     lastMovedToStatusRef.current = null;
+    setDragging(false);
   }
 
   return (
@@ -97,16 +126,13 @@ export default function Board() {
       collisionDetection={rectIntersection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
-      autoScroll={{
-        // ✅ drag edəndə kənara yaxınlaşanda board özü scroll etsin
-        threshold: { x: 0.25, y: 0.25 },
-        acceleration: 12,
-      }}
     >
-      {/* ✅ Mobile: horizontal scroll + snap | md+: grid */}
+      {/* ✅ Mobile: horizontal scroll + snap | drag zamanı snap söndürülür */}
       <section
-        className="
+        ref={boardRef}
+        className={`
           w-full min-w-0
           overflow-x-auto md:overflow-x-visible
           overflow-y-hidden
@@ -114,9 +140,9 @@ export default function Board() {
           px-2 md:px-0
           [-webkit-overflow-scrolling:touch]
           scroll-smooth
-          snap-x snap-mandatory md:snap-none
+          ${dragging ? "snap-none" : "snap-x snap-mandatory md:snap-none"}
           overscroll-x-contain
-        "
+        `}
       >
         <div
           className="
