@@ -24,15 +24,15 @@ export default function Column({ title, status, tasks }) {
       <div
         ref={setNodeRef}
         className={[
-          "shrink-0 w-[calc(100vw-32px)] sm:w-[380px] md:w-full",
+          "w-full",
           "bg-white border border-gray-200 rounded-2xl flex flex-col",
-          // ✅ Mobile-də column özü ekran boyu olsun, içi scroll etsin
-          "h-[calc(100dvh-170px)] md:h-auto",
           "transition",
           isOver ? "ring-2 ring-blue-400" : "",
+          // ✅ mobile-də column hündürlüyü normal, içi scroll
+          "max-h-[calc(100dvh-220px)] md:max-h-none",
         ].join(" ")}
       >
-        {/* ✅ BONUS 2: Sticky header */}
+        {/* Sticky header */}
         <div
           className="
             sticky top-0 z-10
@@ -50,7 +50,6 @@ export default function Column({ title, status, tasks }) {
           </span>
         </div>
 
-        {/* Body: tasks scroll */}
         <div className="p-4 flex-1 overflow-y-auto overflow-x-hidden min-w-0">
           <SortableContext items={ids} strategy={verticalListSortingStrategy}>
             <div className="space-y-3">
